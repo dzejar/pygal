@@ -22,6 +22,7 @@ Commmon graphing functions
 """
 
 from __future__ import division
+from pygal._compat import is_list_like
 from pygal.interpolate import INTERPOLATIONS
 from pygal.graph.base import BaseGraph
 from pygal.view import View, LogView, XYLogView, ReverseView
@@ -632,7 +633,8 @@ class Graph(BaseGraph):
     @cached_property
     def _secondary_min(self):
         """Getter for the minimum series value"""
-        return (self.range[0] if (self.range and self.range[0] is not None)
+        return (self.secondary_range[0] if (
+            self.secondary_range and self.secondary_range[0] is not None)
                 else (min(self._secondary_values)
                       if self._secondary_values else None))
 
@@ -652,7 +654,8 @@ class Graph(BaseGraph):
     @cached_property
     def _secondary_max(self):
         """Getter for the maximum series value"""
-        return (self.range[1] if (self.range and self.range[1] is not None)
+        return (self.secondary_range[1] if (
+            self.secondary_range and self.secondary_range[1] is not None)
                 else (max(self._secondary_values)
                       if self._secondary_values else None))
 
@@ -710,13 +713,14 @@ class Graph(BaseGraph):
         self._post_compute()
         self._compute_margin()
         self._decorate()
-        if self.series and self._has_data():
+        if self.series and self._has_data() and self._values:
             self._plot()
         else:
             self.svg.draw_no_data()
 
     def _has_data(self):
         """Check if there is any data"""
-        return sum(
-            map(len, map(lambda s: s.safe_values, self.series))) != 0 and (
-            sum(map(abs, self._values)) != 0)
+        return any([
+            len([v for v in (s[1] if is_list_like(s) else [s]) if v is not None])
+            for s in self.raw_series
+        ])

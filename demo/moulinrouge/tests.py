@@ -4,11 +4,12 @@ from pygal import (
     Bar, Gauge, Pyramid, Funnel, Dot, StackedBar, StackedLine, XY,
     CHARTS_BY_NAME, Config, Line, Worldmap, Histogram, Box, SwissMapCantons,
     FrenchMapDepartments, FrenchMapRegions, Pie, Treemap, TimeLine, DateLine,
-    SupranationalWorldmap)
+    DateTimeLine, SupranationalWorldmap)
 
 
 from pygal.style import styles, Style, RotateStyle
 from pygal.colors import rotate
+from pygal.graph.horizontal import HorizontalGraph
 from pygal.graph.frenchmap import DEPARTMENTS, REGIONS
 from pygal.graph.swissmap import CANTONS
 from random import randint, choice
@@ -175,7 +176,7 @@ def get_test_routes(app):
         dot = Dot()
         dot.x_labels = map(str, range(4))
         dot.add('a', [1, lnk(3, 'Foo'), 5, 3])
-        dot.add('b', [2, 2, 0, 2])
+        dot.add('b', [2, 2, 0, 2, .1])
         dot.add('c', [5, 1, 5, lnk(3, 'Bar')])
         dot.add('d', [5, 5, lnk(0, 'Babar'), 3])
 
@@ -582,6 +583,8 @@ def get_test_routes(app):
         chart = Line(title=u'Some different points', interpolate='cubic')
         chart.add('line', [1000, 2000, 7000])
         chart.add('other line', [100, 500, 500], secondary=True)
+        chart.range = 0, 10000
+        chart.secondary_range = 0, 1000
         return chart.render_response()
 
     @app.route('/test/legend_at_bottom/<chart>')
@@ -629,10 +632,55 @@ def get_test_routes(app):
         graph.legend_at_bottom = True
         return graph.render_response()
 
+    @app.route('/test/normal/<chart>')
+    def test_normal_for(chart):
+        graph = CHARTS_BY_NAME[chart]()
+        graph.add('1', [1, 3, 12, 3, 4, None, 9])
+        graph.add('2', [7, -4, 10, None, 8, 3, 1])
+        graph.add('3', [7, -14, -10, None, 8, 3, 1])
+        graph.add('4', [7, 4, -10, None, 8, 3, 1])
+        graph.x_labels = ('a', 'b', 'c', 'd', 'e', 'f', 'g')
+        graph.legend_at_bottom = True
+        return graph.render_response()
+
+    @app.route('/test/horizontal_force/<chart>')
+    def test_horizontal_force_for(chart):
+        class H(CHARTS_BY_NAME[chart], HorizontalGraph):
+            pass
+        graph = H()
+
+        graph.add('1', [1, 3, 12, 3, 4, None, 9])
+        graph.add('2', [7, -4, 10, None, 8, 3, 1])
+        graph.add('3', [7, -14, -10, None, 8, 3, 1])
+        graph.add('4', [7, 4, -10, None, 8, 3, 1])
+        graph.x_labels = ('a', 'b', 'c', 'd', 'e', 'f', 'g')
+        graph.legend_at_bottom = True
+        return graph.render_response()
+
     @app.route('/test/inverse_y_axis/<chart>')
     def test_inverse_y_axis_for(chart):
         graph = CHARTS_BY_NAME[chart](**dict(inverse_y_axis=True))
         graph.add('inverse', [1, 2, 3, 12, 24, 36])
         return graph.render_response()
+
+    @app.route('/test/only_zeroes')
+    def test_only_zeroes():
+        line = Line()
+        line.add('zeroes', [])
+        line.add('zeroes 2', [0])
+        return line.render_response()
+
+    @app.route('/test/datetimeline')
+    def test_datetimeline():
+        line = DateTimeLine()
+        line.add('dt', [
+            (datetime(2013, 1, 12, 8, 0), 300),
+            (datetime(2013, 1, 12, 12), 412),
+            (datetime(2013, 2, 22, 12), 823),
+            (datetime(2013, 2, 22, 20), 672)
+        ])
+        line.x_value_formatter = lambda x: x.strftime("%Y-%m-%d")
+        line.x_label_rotation = 45
+        return line.render_response()
 
     return list(sorted(filter(lambda x: x.startswith('test'), locals())))

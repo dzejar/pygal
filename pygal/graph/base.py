@@ -35,6 +35,7 @@ from pygal.adapters import (
 from functools import reduce
 from uuid import uuid4
 import io
+import os
 
 
 class BaseGraph(object):
@@ -184,11 +185,11 @@ class BaseGraph(object):
         if getattr(self, 'y_labels', None) is not None:
             self.y_labels = list(self.y_labels)
         self.state = State(self, **kwargs)
+        self.horizontal = getattr(self, 'horizontal', False)
         self.series = self.prepare_values(
             self.raw_series) or []
         self.secondary_series = self.prepare_values(
             self.raw_series2, len(self.series)) or []
-        self.horizontal = getattr(self, 'horizontal', False)
         self.svg = Svg(self)
         self._x_labels = None
         self._y_labels = None
@@ -216,6 +217,9 @@ class BaseGraph(object):
         self.svg.pre_render()
 
     def teardown(self):
+        if os.getenv('PYGAL_KEEP_STATE'):
+            return
+
         del self.state
         self.state = None
 
